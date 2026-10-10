@@ -172,21 +172,27 @@ function label(
 export default function Globe({
   locations,
   livePing,
+  ownLocation,
 }: {
   locations: GlobePoint[];
   livePing: LivePing | null;
+  /** The current viewer's own coordinates: the persistent wave rings only
+   * ever here, never at other visitors' locations. */
+  ownLocation: { lat: number; lon: number } | null;
 }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const locationsRef = useRef(locations);
   const livePingRef = useRef<LivePing | null>(null);
+  const ownLocationRef = useRef(ownLocation);
 
   /* Sync props into refs inside an effect, never during render. */
   useEffect(() => {
     locationsRef.current = locations;
+    ownLocationRef.current = ownLocation;
     if (livePing && livePing.ts !== livePingRef.current?.ts) {
       livePingRef.current = livePing;
     }
-  }, [locations, livePing]);
+  }, [locations, livePing, ownLocation]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -293,7 +299,6 @@ export default function Globe({
 
       const applyLocations = () => {
         const discs: GlobePt[] = [];
-        const bases: GlobeRing[] = [];
         for (const p of locationsRef.current) {
           const lat = Number(p.lat);
           const lng = Number(p.lon);
@@ -311,12 +316,18 @@ export default function Globe({
               l: tip,
             });
           }
-          bases.push({ lat, lng });
         }
         pts.length = 0;
         pts.push(...discs);
         rings.length = 0;
-        rings.push(...bases.slice(0, 12));
+        // The persistent wave belongs to the current viewer only: a single
+        // ring at their own coordinates. Every other location keeps its
+        // static stacked discs with no wave. (The transient "someone just
+        // landed" ring from a livePing is separate and untouched.)
+        const own = ownLocationRef.current;
+        if (own && Number.isFinite(own.lat) && Number.isFinite(own.lon)) {
+          rings.push({ lat: own.lat, lng: own.lon });
+        }
         if (globe) {
           globe.pointsData(pts.concat(livePts));
           globe.ringsData(rings);

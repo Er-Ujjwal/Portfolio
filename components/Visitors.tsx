@@ -365,7 +365,11 @@ export default function Visitors() {
         <div className="globe-aurora" />
         <div className="globe-particles" id="globe-particles" />
         <div className="globe-container">
-          <Globe locations={globeLocations} livePing={livePing} />
+          <Globe
+            locations={globeLocations}
+            livePing={livePing}
+            ownLocation={ownGeo}
+          />
         </div>
         <div className="globe-ticker" id="globe-ticker">
           <span className="ticker-dot" />

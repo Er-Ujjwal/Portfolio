@@ -4,7 +4,7 @@ A personal portfolio site built with **Next.js 16 (App Router), TypeScript, and 
 
 ## What’s inside
 
-- **Hero** — big lowercase name, personal quote, tag pills, a tidy row of live stat cards (visitor IP + city, ping, and an “on earth for X years” age counter ticking with 9 decimals), a rotating visitor globe with real country boundaries and an arrow marking your location, falling-snowflake canvas, and a real interactive GitHub contributions heatmap (hover any cell for its date + count) with live repo/follower stats.
+- **Hero** — big lowercase name, personal quote, tag pills, a tidy row of live stat cards (visitor IP + city, ping, and an “on earth for X years” age counter ticking with 9 decimals), a rotating visitor globe (globe.gl, bundled via npm) with real country boundaries, stacked visit-count discs per city and a wave ring at your own location, falling-snowflake canvas, and a real interactive GitHub contributions heatmap (hover any cell for its date + count) with live repo/follower stats.
 - **Sections** — about · cool places i work · cool things i build · cool places i learn · cool things i know · cool things i won · cool certs i earned · connect · visitors.
 - **Visitor analytics** — live metrics (visits, cities, countries, live-now), a recent-activity feed, and top countries, powered by Upstash Redis via `/api/track` (heartbeat) and `/api/stats`. Without Upstash credentials the section shows placeholder dashes and “Waiting for visitors...” — never fake numbers.
 
@@ -41,9 +41,16 @@ countries, live-now count, recent activity, and top countries.
 How it works: the browser generates a session id (stored in `sessionStorage`),
 `POST /api/track` heartbeats every 30s (session kept alive 90s; first
 heartbeat per session increments totals and geo counters), and `GET /api/stats`
-refreshes the dashboard every 30s. Geo comes from Vercel's `x-vercel-ip-*`
-headers, falling back to a server-side ipapi.co lookup. Without the env vars,
-the section degrades gracefully to placeholder dashes — nothing is faked.
+refreshes the dashboard every 30s. Geo comes from a server-side provider chain
+(ipapi.co → ip-api.com, since free geo APIs throttle), cached per IP for 24h so
+repeat visits skip the providers entirely; Vercel's `x-vercel-ip-*` headers are
+the fallback, and on local dev the machine's public IP is used so local visits
+record real geography. Recent activity is a rolling 24h window (top 5 most
+recent). The endpoint is guarded by a Redis sliding-window rate limit (30
+req/min per IP, fail-open) and ignores known crawler user-agents so bots can't
+inflate counts. Raw visitor IPs are never stored — Redis keys derive from a
+SHA-256 hash. Without the env vars, the section degrades gracefully to
+placeholder dashes — nothing is faked.
 
 ## Deploy to Vercel (2 minutes)
 
